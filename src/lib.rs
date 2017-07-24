@@ -11,6 +11,11 @@ extern crate base64;
 #[macro_use]
 extern crate error_chain;
 extern crate url;
+#[cfg(test)]
+#[macro_use]
+extern crate lazy_static;
+#[cfg(test)]
+extern crate serde_yaml;
 
 pub mod errors;
 use errors::*;
@@ -27,7 +32,7 @@ use std::time::{UNIX_EPOCH, Duration, SystemTime};
 
 header! { (XRateLimitReset, "x-rate-limit-reset") => [usize] }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ApplicationAuth {
     key: String,
     secret: String,
@@ -271,18 +276,19 @@ impl Twitter {
 mod test {
     use super::*;
     use tokio_core::reactor::Core;
-    const KEY: &str = "";
-    const SECRET: &str = "";
+    use serde_yaml;
+    use std::fs::File;
+
+    lazy_static! {
+        static ref AUTH: ApplicationAuth = {
+            serde_yaml::from_reader(File::open("auth.yaml").unwrap()).unwrap()
+        };
+    }
 
     #[test]
     fn test_auth() {
         let mut core = Core::new().unwrap();
-        let twit = Twitter::authenticate_with(&core.handle(),
-                                              ApplicationAuth {
-                                                  key: KEY.to_owned(),
-                                                  secret: SECRET.to_owned(),
-                                              })
-            .unwrap();
+        let twit = Twitter::authenticate_with(&core.handle(), AUTH.clone()).unwrap();
 
         let twit = core.run(twit).unwrap();
         println!("{}", twit.bearer);
@@ -304,12 +310,7 @@ mod test {
     #[test]
     fn test_list_friend_ids() {
         let mut core = Core::new().unwrap();
-        let twit = Twitter::authenticate_with(&core.handle(),
-                                              ApplicationAuth {
-                                                  key: KEY.to_owned(),
-                                                  secret: SECRET.to_owned(),
-                                              })
-            .unwrap();
+        let twit = Twitter::authenticate_with(&core.handle(), AUTH.clone()).unwrap();
 
         let twit = core.run(twit).unwrap();
 
@@ -320,12 +321,7 @@ mod test {
     #[test]
     fn test_list_followers_ids() {
         let mut core = Core::new().unwrap();
-        let twit = Twitter::authenticate_with(&core.handle(),
-                                              ApplicationAuth {
-                                                  key: KEY.to_owned(),
-                                                  secret: SECRET.to_owned(),
-                                              })
-            .unwrap();
+        let twit = Twitter::authenticate_with(&core.handle(), AUTH.clone()).unwrap();
 
         let twit = core.run(twit).unwrap();
 
